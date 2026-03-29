@@ -1,0 +1,4 @@
+algorithm,n,repeats,avg_ms,result
+naive_chain,128,100,0.000030,1640.250
+two_way_chain,128,100,0.000030,1640.250
+pairwise_reduction,128,100,0.000050,1640.250

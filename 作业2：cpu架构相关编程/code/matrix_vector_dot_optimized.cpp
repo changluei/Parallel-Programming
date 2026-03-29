@@ -1,4 +1,4 @@
-#include <algorithm>
+﻿#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <iomanip>
@@ -11,6 +11,8 @@
 using namespace std;
 
 using Clock = chrono::steady_clock;
+
+const int DEFAULT_REPEATS = 100;
 
 volatile double g_sink = 0.0;
 
@@ -48,15 +50,6 @@ double checksum(const vector<double> &values) {
     return accumulate(values.begin(), values.end(), 0.0);
 }
 
-int chooseRepeats(int n) {
-    const long long work = max(1LL, 1LL * n * n);
-    const long long targetWork = 64LL * 1024 * 1024;
-    long long repeats = targetWork / work;
-    repeats = max(5LL, repeats);
-    repeats = min(2000LL, repeats);
-    return static_cast<int>(repeats);
-}
-
 double matrixMiB(int n) {
     const double bytes = static_cast<double>(n) * n * sizeof(double);
     return bytes / (1024.0 * 1024.0);
@@ -82,8 +75,8 @@ double benchmark(Func func, int repeats, vector<double> &input, const vector<dou
 
 int main(int argc, char *argv[]) {
     const int n = argc >= 2 ? max(1, atoi(argv[1])) : 1024;
-    const int repeats = argc >= 3 ? max(1, atoi(argv[2])) : chooseRepeats(n);
-    const string csvPath = argc >= 4 ? argv[3] : "matrix_vector_dot_results.csv";
+    const int repeats = argc >= 3 ? max(1, atoi(argv[2])) : DEFAULT_REPEATS;
+    const string csvPath = argc >= 4 ? argv[3] : buildDefaultCsvPath("matrix_vector_dot", n);
 
     vector<double> a = buildInputVector(n);
     vector<double> b = buildMatrix(n);

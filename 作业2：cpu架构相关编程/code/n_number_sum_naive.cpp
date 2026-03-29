@@ -1,4 +1,4 @@
-#include <chrono>
+﻿#include <chrono>
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
@@ -9,6 +9,8 @@
 using namespace std;
 
 using Clock = chrono::steady_clock;
+
+const int DEFAULT_REPEATS = 100;
 
 volatile double g_sink = 0.0;
 
@@ -26,15 +28,6 @@ double naiveChainSum(const vector<double> &data) {
         sum += value;
     }
     return sum;
-}
-
-int chooseRepeats(int n) {
-    const long long work = max(1LL, static_cast<long long>(n));
-    const long long targetWork = 32LL * 1024 * 1024;
-    long long repeats = targetWork / work;
-    repeats = max(20LL, repeats);
-    repeats = min(100000LL, repeats);
-    return static_cast<int>(repeats);
 }
 
 template <class Func>
@@ -57,8 +50,8 @@ double benchmark(Func func, int repeats, vector<double> &data, double &resultHol
 
 int main(int argc, char *argv[]) {
     const int n = argc >= 2 ? max(1, atoi(argv[1])) : 65536;
-    const int repeats = argc >= 3 ? max(1, atoi(argv[2])) : chooseRepeats(n);
-    const string csvPath = argc >= 4 ? argv[3] : "n_number_sum_results.csv";
+    const int repeats = argc >= 3 ? max(1, atoi(argv[2])) : DEFAULT_REPEATS;
+    const string csvPath = argc >= 4 ? argv[3] : buildDefaultCsvPath("n_number_sum", n);
 
     vector<double> data = buildData(n);
     double result = naiveChainSum(data);
