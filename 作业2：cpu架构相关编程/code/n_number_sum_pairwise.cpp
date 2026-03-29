@@ -25,17 +25,10 @@ vector<double> buildData(int n) {
 
 double pairwiseReductionSum(const vector<double> &input, vector<double> &work) {
     copy(input.begin(), input.end(), work.begin());
-    int length = static_cast<int>(input.size());
-    while (length > 1) {
-        int nextLength = 0;
-        int i = 0;
-        for (; i + 1 < length; i += 2) {
-            work[nextLength++] = work[i] + work[i + 1];
+    for (int m = static_cast<int>(input.size()); m > 1; m /= 2) {
+        for (int i = 0; i < m / 2; ++i) {
+            work[i] = work[i * 2] + work[i * 2 + 1];
         }
-        if (i < length) {
-            work[nextLength++] = work[i];
-        }
-        length = nextLength;
     }
     return work[0];
 }
