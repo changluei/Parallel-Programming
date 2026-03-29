@@ -1,8 +1,26 @@
-# 简介
+# Introduction😄
 This is the parallel programming assignment repository for Cui Di, a student majoring in Computer Science and Technology at Nankai University.
+
 Student ID: 2412439
 
 ---
 
-Dear teaching assistant,please accept my plea for mercy.
-If you don't find the corresponding program code in my warehouse, please do not hesitate to contact me.
+Dear teaching assistants,please accept my plea for mercy.😭
+If you don't find the corresponding program code in my repositories, please do not hesitate to contact me via Feishu.
+
+If you think my homework is great, please give it a star⭐.
+
+---
+
+# 简介😄
+
+这是来自南开大学计算机科学与技术专业的崔迪同学，所实现的并行程序设计作业。
+
+学号:2412439
+
+---
+
+亲爱的助教，请手下留情。😭
+如果您在我的仓库里没找到我的代码实现，请随时通过飞书联系我。
+
+如果您觉得我的作业很棒，麻烦您给个star⭐。
