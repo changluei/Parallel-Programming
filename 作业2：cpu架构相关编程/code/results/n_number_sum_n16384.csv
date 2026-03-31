@@ -1,0 +1,4 @@
+algorithm,n,repeats,avg_ms,result
+naive_chain,16384,100,0.014790,233458.000
+two_way_chain,16384,100,0.007810,233458.000
+two_way_chain,16384,1000,0.006992,233458.000
