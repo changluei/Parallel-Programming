@@ -308,17 +308,22 @@ return work[0];
 \subsubsection{\(n\) 个数求和}
 对于求和实验，建议使用 VTune 的 \texttt{Hotspots} 与 \texttt{Microarchitecture Exploration} 分析类型，重点观察三种实现的热点函数、流水线停顿比例以及指令吞吐差异。平凡链式累加通常会因为单条累加依赖链较长而限制指令级并行；两路链式累加有望在保持较低实现成本的同时，显著提升吞吐；pairwise reduction 则可能在热点中表现出额外的数组复制和多轮规约开销。
 
-\placeholder{【此处插入 n 个数求和的 VTune Hotspots / Microarchitecture Exploration 截图】}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.88\textwidth]{fig/n_number_sum_profile_bar.pdf}
+    \caption{n个数求和 profiling结果图例}
+    \label{fig:sum_profile}
+\end{figure}
 
 \begin{table}[H]
     \centering
-    \begin{tabular}{p{3cm}p{3.5cm}p{2cm}p{2cm}p{4cm}}
+    \begin{tabular}{p{1.8cm}p{4.2cm}p{2cm}p{2cm}p{2cm}p{2cm}}
         \toprule
-        版本 & Instructions Retired & Retiring 占比 & Backend Bound & 备注 \\
+        版本 & 热点函数 & Instructions Retired & Clockticks  & CPIRate  & CPU time(ms) \\
         \midrule
-        平凡链式 & \texttt{naiveChainSum} & 【待填】 & 【待填】 & 【待填写：重点现象】 \\
-        两路链式 & \texttt{twoWayChainSum} & 【待填】 & 【待填】 & 【待填写：重点现象】 \\
-        递归算法 & \texttt{pairwiseReductionSum} & 【待填】 & 【待填】 & 【待填写：重点现象】 \\
+        平凡链式 & \texttt{naiveChainSum} & 42,000,000 & 36,400,000& 0.867 & 7.991 \\
+        两路链式 & \texttt{twoWayChainSum} & 39,200,000 & 16,800,000 & 0.429 & 3.995 \\
+        递归算法 & \texttt{pairwiseReductionSum} & 112,000,000 & 19,600,000 & 0.175 & 6.992 \\
         \bottomrule
     \end{tabular}
     \caption{\(n\) 个数求和 profiling 结果记录表（待补充）}
@@ -421,6 +426,8 @@ sum = sum0 + sum1 + sum2 + sum3;
 后续若继续完善本实验，建议重点补充以下内容：一是完成循环展开版本的独立实现与测试；二是结合 VTune 的具体数据，将 cache miss、热点函数、停顿来源与前文的性能曲线进行一一对应；三是进一步尝试 SIMD 向量化与编译器优化级别对比，从而形成更完整的 CPU 架构相关优化实验链条。\textbf{【此处也可补充个人在实验过程中的问题、改进思路与心得体会】}
 
 \end{document}
+
+
 
 
 
