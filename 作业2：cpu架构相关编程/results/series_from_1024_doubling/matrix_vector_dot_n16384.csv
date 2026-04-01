@@ -1,3 +1,0 @@
-algorithm,n,matrix_mib,repeats,avg_ms,checksum
-naive_column_major,16384,2048.00,1,4150.502000,7711075362253.000
-cache_optimized_row_major,16384,2048.00,1,144.921000,7711075362253.000

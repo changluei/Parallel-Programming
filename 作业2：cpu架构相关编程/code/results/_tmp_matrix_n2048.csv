@@ -1,0 +1,2 @@
+algorithm,n,matrix_mib,repeats,avg_ms,checksum
+naive_column_major,2048,32.00,50,18.384240,15237317932.656

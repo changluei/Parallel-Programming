@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")
@@ -9,12 +9,21 @@ from matplotlib.ticker import FuncFormatter, MaxNLocator
 
 
 RESULTS_DIR = Path(r"E:\桌面\大二下\并行\作业2：cpu架构相关编程\results")
-SERIES_DIR = RESULTS_DIR / "series_from_1024_doubling"
+SUM_SERIES_DIR = RESULTS_DIR / "series_from_1024_doubling"
+MATRIX_SERIES_DIR = RESULTS_DIR / "cache_5stage_pow2like_series"
 OUTPUT_DIR = Path(r"E:\桌面\大二下\并行\作业2：cpu架构相关编程\CPU架构相关编程\fig")
 
-SIZES = [1024, 2048, 4096, 8192, 16384]
-POSITIONS = list(range(len(SIZES)))
-POSITION_MAP = {n: i for i, n in enumerate(SIZES)}
+SUM_SIZES = [1024, 2048, 4096, 8192, 16384]
+MATRIX_SIZES = [256, 1024, 1536, 1792, 2048]
+
+MATRIX_TICK_LABELS = [
+    "256\n< L1",
+    "1024\n< L2",
+    "1536\n< L3",
+    "1792\n≈ L3",
+    "2048\n> L3",
+]
+SUM_TICK_LABELS = [rf"$2^{{{n.bit_length() - 1}}}$" for n in SUM_SIZES]
 
 MATRIX_ALGORITHMS = [
     "naive_column_major",
@@ -47,13 +56,17 @@ ALGORITHM_MARKERS = {
     "pairwise_reduction": "^",
 }
 
-# You can tune these two blocks directly.
-MATRIX_INSET_BOUNDS = [0.09, 0.22, 0.28, 0.28]
+MATRIX_INSET_BOUNDS = [0.12, 0.22, 0.26, 0.28]
+MATRIX_INSET_YMIN = 0.008
+MATRIX_INSET_YMAX = 0.056
+MATRIX_INSET_YTICKS = [0.008, 0.016, 0.024, 0.032, 0.040, 0.048, 0.056]
+MATRIX_INSET_XMIN = -0.004
+MATRIX_INSET_XMAX = 0.008
 MATRIX_FOCUS_BOX = {
     "x": -0.10,
-    "y": -100.0,
-    "width": 1.20,
-    "height": 250.0,
+    "y": -1.00,
+    "width": 0.32,
+    "height": 2.050,
 }
 
 
@@ -71,8 +84,6 @@ def format_runtime_tick(value, _pos):
         return f"{value:.3f}"
     if abs_value >= 0.01:
         return f"{value:.4f}"
-    if abs_value >= 0.001:
-        return f"{value:.4f}"
     return f"{value:.5f}"
 
 
@@ -88,10 +99,11 @@ def setup_style():
     )
 
 
-def load_series(prefix: str) -> pd.DataFrame:
+def load_series(prefix, sizes, series_dir):
     frames = []
-    for n in SIZES:
-        csv_path = SERIES_DIR / f"{prefix}_n{n}.csv"
+    position_map = {n: i for i, n in enumerate(sizes)}
+    for n in sizes:
+        csv_path = series_dir / f"{prefix}_n{n}.csv"
         if not csv_path.exists():
             raise FileNotFoundError(f"Missing CSV file: {csv_path}")
         frame = pd.read_csv(csv_path)
@@ -99,12 +111,13 @@ def load_series(prefix: str) -> pd.DataFrame:
     data = pd.concat(frames, ignore_index=True)
     data["n"] = data["n"].astype(int)
     data["avg_ms"] = data["avg_ms"].astype(float)
-    data["position"] = data["n"].map(POSITION_MAP)
+    data["position"] = data["n"].map(position_map)
     return data
 
 
-def add_matrix_inset(ax, data: pd.DataFrame) -> None:
-    zoom_data = data[data["n"].isin([1024, 2048])].copy()
+def add_matrix_inset(ax, data):
+    zoom_ns = [MATRIX_SIZES[0], MATRIX_SIZES[1]]
+    zoom_data = data[data["n"].isin(zoom_ns)].copy()
     if zoom_data.empty:
         return
 
@@ -116,20 +129,30 @@ def add_matrix_inset(ax, data: pd.DataFrame) -> None:
             subset["position"],
             subset["avg_ms"],
             color=ALGORITHM_COLORS[algorithm],
-            marker=ALGORITHM_MARKERS[algorithm],
             linewidth=2.0,
-            markersize=5.4,
+            zorder=3,
+        )
+        x0 = float(subset["position"].iloc[0])
+        y0 = float(subset["avg_ms"].iloc[0])
+        inset.plot(
+            [x0],
+            [y0],
+            color=ALGORITHM_COLORS[algorithm],
+            marker=ALGORITHM_MARKERS[algorithm],
+            linestyle="None",
+            markersize=6.0,
             markerfacecolor="white",
             markeredgewidth=1.2,
+            zorder=4,
         )
 
-    inset.set_xlim(-0.12, 1.12)
-    inset.set_ylim(0.0, 22.0)
-    inset.set_xticks([0, 1])
-    inset.set_xticklabels([r"$2^{10}$", r"$2^{11}$"], fontsize=8.5)
+    inset.set_xlim(MATRIX_INSET_XMIN, MATRIX_INSET_XMAX)
+    inset.set_ylim(MATRIX_INSET_YMIN, MATRIX_INSET_YMAX)
+    inset.set_xticks([0])
+    inset.set_xticklabels([str(zoom_ns[0])], fontsize=8.5)
     inset.tick_params(axis="y", labelsize=8.5)
     inset.yaxis.set_major_formatter(FuncFormatter(format_runtime_tick))
-    inset.yaxis.set_major_locator(MaxNLocator(nbins=5))
+    inset.set_yticks(MATRIX_INSET_YTICKS)
     inset.grid(True, linestyle="--", linewidth=0.6, alpha=0.3)
     for spine in inset.spines.values():
         spine.set_linewidth(1.0)
@@ -147,7 +170,10 @@ def add_matrix_inset(ax, data: pd.DataFrame) -> None:
     )
     ax.add_patch(focus_box)
 
-    left_top = (MATRIX_FOCUS_BOX["x"], MATRIX_FOCUS_BOX["y"] + MATRIX_FOCUS_BOX["height"])
+    left_top = (
+        MATRIX_FOCUS_BOX["x"],
+        MATRIX_FOCUS_BOX["y"] + MATRIX_FOCUS_BOX["height"],
+    )
     right_top = (
         MATRIX_FOCUS_BOX["x"] + MATRIX_FOCUS_BOX["width"],
         MATRIX_FOCUS_BOX["y"] + MATRIX_FOCUS_BOX["height"],
@@ -177,8 +203,9 @@ def add_matrix_inset(ax, data: pd.DataFrame) -> None:
     ax.add_artist(right_conn)
 
 
-def plot_curve(data: pd.DataFrame, algorithms: list[str], title: str, output_path: Path, add_inset: bool = False) -> None:
-    fig, ax = plt.subplots(figsize=(8.6, 5.3))
+def plot_curve(data, algorithms, output_path, sizes, tick_labels, x_label, add_inset=False):
+    fig, ax = plt.subplots(figsize=(8.7, 5.4))
+    positions = list(range(len(sizes)))
 
     for algorithm in algorithms:
         subset = data[data["algorithm"] == algorithm].sort_values("n")
@@ -193,10 +220,11 @@ def plot_curve(data: pd.DataFrame, algorithms: list[str], title: str, output_pat
             markerfacecolor="white",
             markeredgewidth=1.5,
         )
-    ax.set_xlabel("程序循环次数", fontsize=12)
+
+    ax.set_xlabel(x_label, fontsize=12)
     ax.set_ylabel("平均运行时间 (ms)", fontsize=12)
-    ax.set_xticks(POSITIONS)
-    ax.set_xticklabels([rf"$2^{{{n.bit_length() - 1}}}$" for n in SIZES], fontsize=11)
+    ax.set_xticks(positions)
+    ax.set_xticklabels(tick_labels, fontsize=10.5)
     ax.tick_params(axis="y", labelsize=11)
     ax.yaxis.set_major_formatter(FuncFormatter(format_runtime_tick))
     ax.yaxis.set_major_locator(MaxNLocator(nbins=6))
@@ -225,20 +253,24 @@ def main():
     setup_style()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    sum_data = load_series("n_number_sum")
+    sum_data = load_series("n_number_sum", SUM_SIZES, SUM_SERIES_DIR)
     plot_curve(
         sum_data,
         SUM_ALGORITHMS,
-        "n 个数求和性能折线图",
         OUTPUT_DIR / "n_number_sum_runtime_curve.pdf",
+        SUM_SIZES,
+        SUM_TICK_LABELS,
+        "问题规模 n",
     )
 
-    matrix_data = load_series("matrix_vector_dot")
+    matrix_data = load_series("matrix_vector_dot", MATRIX_SIZES, MATRIX_SERIES_DIR)
     plot_curve(
         matrix_data,
         MATRIX_ALGORITHMS,
-        "矩阵与向量内积性能折线图",
         OUTPUT_DIR / "matrix_vector_dot_runtime_curve.pdf",
+        MATRIX_SIZES,
+        MATRIX_TICK_LABELS,
+        "矩阵维度 n（按 cache 阶段选点）",
         add_inset=True,
     )
 
