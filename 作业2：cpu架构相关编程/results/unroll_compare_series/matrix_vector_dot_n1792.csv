@@ -1,0 +1,3 @@
+algorithm,n,matrix_mib,repeats,avg_ms,checksum
+cache_optimized_row_major,1792,24.50,150,1.193080,10086526525.219
+cache_optimized_row_major_unrolled8,1792,24.50,150,1.125213,10086526525.219

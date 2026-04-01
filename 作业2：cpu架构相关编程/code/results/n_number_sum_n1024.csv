@@ -1,0 +1,2 @@
+algorithm,n,repeats,avg_ms,result
+two_way_chain,1024,5,0.000200,14499.250

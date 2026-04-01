@@ -1,0 +1,3 @@
+algorithm,n,repeats,avg_ms,result
+two_way_chain,2048,1000,0.000450,29010.750
+four_way_unrolled_chain,2048,1000,0.000253,29010.750
