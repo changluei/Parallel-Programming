@@ -1,5 +1,5 @@
 # Introduction😄
-This is the parallel programming assignment repository for Cui Di, a student majoring in Computer Science and Technology at Nankai University.
+This is the repository for Cui Di, a student majoring in Computer Science and Technology at Nankai University.
 
 Student ID: 2412439
 
@@ -14,7 +14,7 @@ If you think my homework is great, please give it a star⭐.
 
 # 简介😄
 
-这是来自南开大学计算机科学与技术专业的崔迪同学，所实现的并行程序设计作业。
+这是来自南开大学计算机科学与技术专业的崔迪同学。
 
 学号:2412439
 
