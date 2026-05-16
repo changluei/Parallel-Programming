@@ -1,0 +1,27 @@
+\contentsline {section}{\numberline {1}实验概述}{2}{section.1}%
+\contentsline {section}{\numberline {2}串行基线与性能瓶颈}{2}{section.2}%
+\contentsline {section}{\numberline {3}并行优化设计}{3}{section.3}%
+\contentsline {subsection}{\numberline {3.1}B 矩阵局部窄带更新}{3}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Givens 旋转日志与延迟累积}{3}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}优化后主循环伪代码}{4}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}数学等价性分析}{6}{subsection.3.4}%
+\contentsline {paragraph}{右旋转的等价性。}{6}{paragraph*.2}%
+\contentsline {paragraph}{左旋转的等价性。}{6}{paragraph*.3}%
+\contentsline {paragraph}{一串旋转的等价性。}{6}{paragraph*.4}%
+\contentsline {paragraph}{$B$ 的 block-local 更新等价性。}{6}{paragraph*.5}%
+\contentsline {paragraph}{按行并行应用日志的等价性。}{7}{paragraph*.6}%
+\contentsline {subsection}{\numberline {3.5}pthread 动态任务调度}{7}{subsection.3.5}%
+\contentsline {subsection}{\numberline {3.6}OpenMP 实现}{7}{subsection.3.6}%
+\contentsline {section}{\numberline {4}正确性验证}{8}{section.4}%
+\contentsline {section}{\numberline {5}实验环境与方法}{8}{section.5}%
+\contentsline {section}{\numberline {6}性能结果}{8}{section.6}%
+\contentsline {subsection}{\numberline {6.1}大规模样例耗时}{8}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}结果分析}{9}{subsection.6.2}%
+\contentsline {section}{\numberline {7}同步与数据竞争分析}{10}{section.7}%
+\contentsline {section}{\numberline {8}Profiling 分析}{10}{section.8}%
+\contentsline {subsection}{\numberline {8.1}总体硬件事件统计}{10}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}热点函数对比}{11}{subsection.8.2}%
+\contentsline {subsection}{\numberline {8.3}Profiling 结论}{12}{subsection.8.3}%
+\contentsline {section}{\numberline {9}结论}{13}{section.9}%
+\contentsline {section}{\numberline {A}实验文件说明}{13}{appendix.A}%
+\contentsline {section}{\numberline {B}与大模型协作记录}{14}{appendix.B}%

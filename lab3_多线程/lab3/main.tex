@@ -1,0 +1,586 @@
+﻿\documentclass[UTF8,a4paper]{ctexart}
+
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{listings}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{pgfplots}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+
+\geometry{left=2.3cm,right=2.3cm,top=2.7cm,bottom=2.7cm}
+\graphicspath{{images/}{fig/}{./}}
+\pgfplotsset{compat=1.18}
+\hypersetup{colorlinks=true, linkcolor=black, citecolor=black, urlcolor=blue}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\kaishu 并行程序设计 Lab3}
+\rhead{\kaishu SVD 多线程实验}
+\cfoot{\thepage\ of \pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.1pt}
+\setlength{\headheight}{13pt}
+\sloppy
+
+\lstset{
+  language=C++,
+  basicstyle=\small\ttfamily,
+  keywordstyle=\color{blue!70!black}\bfseries,
+  commentstyle=\color{green!40!black},
+  stringstyle=\color{orange!70!black},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  frame=single,
+  breaklines=true,
+  columns=fullflexible,
+  tabsize=2
+}
+
+\floatname{algorithm}{算法}
+\renewcommand{\algorithmicrequire}{\textbf{输入：}}
+\renewcommand{\algorithmicensure}{\textbf{输出：}}
+\renewcommand{\contentsname}{目录}
+\renewcommand{\figurename}{图}
+\renewcommand{\tablename}{表}
+\renewcommand{\refname}{参考资料}
+
+\title{\textbf{并行程序设计 Lab3 多线程实验报告}\\矩阵 SVD 算子 pthread 与 OpenMP 优化}
+\author{崔迪\\学号：2412439\\专业：计算机科学与技术}
+\date{\today}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \includegraphics[width=0.78\textwidth]{NKU.png}\\[1.2cm]
+  {\Huge\bfseries 并行程序设计 Lab3\\[0.35cm]多线程实验报告}\\[1.2cm]
+  {\LARGE 矩阵 SVD 算子 pthread 与 OpenMP 优化}\\[2.0cm]
+  \vfill
+  {\Large 姓名：崔迪}\\[0.35cm]
+  {\Large 学号：2412439}\\[0.35cm]
+  {\Large 专业：计算机科学与技术}\\[1.2cm]
+  \vfill
+  {\Large \today}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\section{实验概述}
+
+本次 Lab3 选择矩阵 SVD 算子作为多线程实验选题。根据实验指导书，SVD 选题的基础要求包括：完成相应算法的 pthread 与 OpenMP 并行化实现，进行串并行对比、不同问题规模下的性能评估，并讨论任务划分、同步方式、负载均衡、内存访问模式以及 profiling 等问题。
+
+实验框架中，一个一般矩阵 $A$ 首先经 Householder 变换化为上二对角矩阵 $B$，随后由 \texttt{gkh\_svd\_from\_bidiagonal} 对 $B$ 进行 Golub--Kahan SVD 迭代，最终得到
+\[
+  A = U \Sigma V^T .
+\]
+指导书明确指出，本题重点关注 \texttt{gkh\_svd\_from\_bidiagonal} 函数。因此，本实验主要优化 GKH 迭代阶段。
+
+\section{串行基线与性能瓶颈}
+
+原始 GKH 迭代的核心流程如下：每轮先处理对角元接近零的特殊情况，再通过超对角线收敛情况切分 active blocks，最后对每个非平凡 block 做一次 bulge chasing。
+
+\begin{algorithm}[H]
+\caption{原始 GKH 迭代主循环}
+\begin{algorithmic}[1]
+\Require 上二对角矩阵 $B$，正交矩阵 $U,V$
+\For{$iter=0$ to $max\_iter-1$}
+  \State 清理 $B$ 中的数值噪声
+  \State 处理 $d_k \approx 0$ 且 $e_k \neq 0$ 的特殊情况
+  \State 根据超对角线 $e_k$ 切分 active blocks
+  \If{所有 block 均为 $1\times 1$}
+    \State 迭代收敛，退出
+  \EndIf
+  \For{每个非平凡 block}
+    \State 执行一次 Golub--Kahan bulge chasing
+  \EndFor
+\EndFor
+\Ensure 收敛后的对角矩阵 $\Sigma$ 以及对应 $U,V$
+\end{algorithmic}
+\end{algorithm}
+
+直接把 block 循环套一层多线程并不是理想方案。其原因有三点：第一，迭代初期通常只有一个大 block，block 级并行度不足；第二，原代码对 $B$ 的行列旋转复用了 dense matrix 更新函数，会对整行或整列扫描，多个 block 并发时存在潜在写冲突；第三，每次 Givens 旋转立即更新 dense 矩阵 $U,V$，导致大量跨行的列写入，cache 局部性较差，且并发更新时同步代价较高。
+
+因此，本实验采用的核心优化策略不是简单并行外层 block 循环，而是将 GKH 过程拆成结构稀疏的 $B$ 更新和 dense 的 $U,V$ 批量更新两个阶段。
+
+\section{并行优化设计}
+
+\subsection{B 矩阵局部窄带更新}
+
+对于上二对角矩阵上的 bulge chasing，一次 Givens 旋转只会影响当前 active block 内的小范围元素。原始代码中的 \texttt{apply\_right\_cols(B,...)} 和 \texttt{apply\_left\_rows(B,...)} 会扫描整个矩阵行或列，造成大量无效访存。
+
+优化后，将 $B$ 的更新限制在当前 block $[l,r]$ 内：
+
+\begin{lstlisting}[caption={$B$ 的 block-local 右乘更新}]
+static void apply_right_cols_B_block(
+    Matrix &B, int c0, int c1, double c, double s, int l, int r)
+{
+    for (int i = l; i <= r; ++i) {
+        const double a = B.at(i, c0);
+        const double b = B.at(i, c1);
+        B.at(i, c0) = a * c - b * s;
+        B.at(i, c1) = a * s + b * c;
+    }
+}
+\end{lstlisting}
+
+这样做以后，不同 active block 对 $B$ 的写入区间互不重叠，后续 block 级并行时不需要给 $B$ 加全局锁。
+
+\subsection{Givens 旋转日志与延迟累积}
+
+原代码每产生一个 Givens 旋转，就立即更新 $U$ 或 $V$ 的两列。对于 $1000\times 1000$ 的 dense 矩阵，这类操作是主要内存带宽瓶颈。
+
+本实验将即时更新改为记录旋转日志：
+
+\begin{lstlisting}[caption={旋转日志结构}]
+struct Rot {
+    int a, b;
+    double c, s;
+};
+
+struct BlockLog {
+    std::vector<Rot> u_rots;
+    std::vector<Rot> v_rots;
+};
+\end{lstlisting}
+
+在 \texttt{one\_block\_step\_logged} 中，只更新 $B$ 并记录 $U,V$ 应用的 Givens 旋转。等所有 block 的 $B$ 更新完成后，再统一将所有旋转按行批量应用到 $U,V$。由于矩阵类采用行主序存储，按行遍历比逐次列更新更符合 cache 访问特征。
+
+\subsection{优化后主循环伪代码}
+
+综合上述两个核心改造后，优化版 GKH 迭代不再在 block step 中立即更新 dense 的 $U,V$，而是将一次迭代拆为三个阶段：block-local 更新 $B$、合并旋转日志、并行批量更新 $U,V$。伪代码如算法\ref{alg:optimized-gkh} 所示。
+
+\begin{algorithm}[H]
+\caption{优化后的 GKH 迭代框架}
+\label{alg:optimized-gkh}
+\begin{algorithmic}[1]
+\Require 上二对角矩阵 $B$，正交矩阵 $U,V$，最大迭代次数 $max\_iter$，容差 $tol$
+\Ensure 对角化后的 $B$ 以及累积后的 $U,V$
+\For{$iter=0$ to $max\_iter-1$}
+  \State 处理 $d_k\approx 0$ 的特殊情况
+  \State 根据 $|e_k| \le tol(|d_k|+|d_{k+1}|+1)$ 切分 active blocks
+  \If{所有 active block 均为 $1\times 1$}
+    \State 标记收敛并退出循环
+  \EndIf
+  \State 将非平凡 block 构造成任务，并按长度从大到小排序
+  \State 清空本轮全局旋转日志 $\mathcal{L}_U,\mathcal{L}_V$
+  \Statex
+  \State \textbf{并行 block phase:}
+  \ForAll{空闲线程 $t$}
+    \While{仍有未领取任务}
+      \State 原子领取一个 block $[l,r]$
+      \State 在 $B[l:r,l:r]$ 内执行一次 bulge chasing
+      \State 将产生的左旋转写入本任务的 $\mathcal{L}_{U,[l,r]}$
+      \State 将产生的右旋转写入本任务的 $\mathcal{L}_{V,[l,r]}$
+    \EndWhile
+  \EndFor
+  \Statex
+  \State 按确定的串行 block 顺序合并所有任务日志到 $\mathcal{L}_U,\mathcal{L}_V$
+  \Statex
+  \State \textbf{并行 dense accumulation phase:}
+  \ForAll{线程 $t$}
+    \State 令 $I_t$ 为该线程负责的 $U$ 的连续行区间
+    \ForAll{$i\in I_t$}
+      \State 将 $\mathcal{L}_U$ 中所有旋转依次应用到 $U$ 的第 $i$ 行
+    \EndFor
+  \EndFor
+  \ForAll{线程 $t$}
+    \State 令 $J_t$ 为该线程负责的 $V$ 的连续行区间
+    \ForAll{$i\in J_t$}
+      \State 将 $\mathcal{L}_V$ 中所有旋转依次应用到 $V$ 的第 $i$ 行
+    \EndFor
+  \EndFor
+\EndFor
+\State 将 $B$ 的超对角线清零，并对奇异值做非负化与降序重排
+\end{algorithmic}
+\end{algorithm}
+
+与原始版本相比，算法\ref{alg:optimized-gkh} 的关键变化是把一次 Givens 旋转的 dense 累积从“立即执行”移动到了每轮迭代的末尾。这样做不会减少必须执行的正交变换数量，但改变了访存模式：原本反复更新 $U,V$ 的两列，变为按行顺序扫描 $U,V$ 并批量执行一串旋转，因而更适合行主序矩阵存储和多线程行划分。
+
+\subsection{数学等价性分析}
+
+本小节说明优化实现与原串行 GKH 在数学上等价。设某一时刻分解关系为
+\[
+  A = U B V^T,
+\]
+其中 $U,V$ 为正交矩阵，$B$ 为上二对角或带有局部 bulge 的中间矩阵。
+
+\paragraph{右旋转的等价性。}
+对 $B$ 的相邻两列右乘 Givens 旋转 $R$ 时，原算法执行
+\[
+  B' = B R, \qquad V' = V R.
+\]
+由于 $R$ 是正交矩阵，有 $R R^T=I$，因此
+\[
+  U B' {V'}^T
+  = U (B R) (V R)^T
+  = U B R R^T V^T
+  = U B V^T
+  = A.
+\]
+所以右旋转只要在 $V$ 中按同样顺序累积，就保持分解不变。优化版只是先把 $R$ 记录到日志中，稍后再执行 $V\leftarrow V R$，其代数效果相同。
+
+\paragraph{左旋转的等价性。}
+对 $B$ 的相邻两行左乘 Givens 旋转 $L$ 时，原算法执行
+\[
+  B' = L B, \qquad U' = U L^T.
+\]
+同样利用 $L^T L=I$，可得
+\[
+  U' B' V^T
+  = (U L^T)(L B)V^T
+  = U L^T L B V^T
+  = U B V^T
+  = A.
+\]
+代码中记录到 $U$ 日志的旋转参数为 $(c,-s)$，正是因为 $U$ 需要右乘 $L^T$ 而不是 $L$。因此，左旋转的延迟累积也保持分解等式不变。
+
+\paragraph{一串旋转的等价性。}
+设一轮迭代中按串行顺序产生的右旋转为 $R_1,R_2,\ldots,R_p$，左旋转为 $L_1,L_2,\ldots,L_q$。原始即时更新最终相当于
+\[
+  V_{new}=V_0R_1R_2\cdots R_p,
+\]
+\[
+  U_{new}=U_0L_1^TL_2^T\cdots L_q^T.
+\]
+优化版将这些 $R_i,L_i^T$ 依次存入日志，并在本轮末尾按相同顺序批量应用，因此得到的 $U_{new},V_{new}$ 与即时更新完全一致。对于不同 active block，由于 block 的指标区间互不相交，相应旋转作用在不同列集合上；这些嵌入到全矩阵中的正交旋转彼此可交换。实现中仍按原串行从右到左的 block 顺序合并日志，是为了让浮点舍入顺序尽量稳定。
+
+\paragraph{$B$ 的 block-local 更新等价性。}
+当超对角线 $e_k$ 被判定为收敛并置零后，$B$ 被分解为相互独立的 active blocks。对某个 block $[l,r]$，其中的 Givens 旋转可以看成一个嵌入到全矩阵中的正交矩阵
+\[
+  \widehat R = I_l \oplus R_{[l,r]} \oplus I_{n-r-1},
+\]
+或类似的左乘矩阵 $\widehat L$。全矩阵 dense 更新 $B\leftarrow B\widehat R$ 与只更新子矩阵 $B[l:r,l:r]$ 的结果相同，因为 block 外对应的行列不是旋转作用区域，block 之间的耦合元素已经为 0。因此，block-local 更新不会改变算法的数学结果，只是避免了对必为 0 或不相关位置的无效访存。
+
+\paragraph{按行并行应用日志的等价性。}
+批量更新 $U$ 或 $V$ 本质上是右乘一个由 Givens 旋转组成的正交乘积 $Q$：
+\[
+  M_{new}=M Q, \qquad M\in\{U,V\}.
+\]
+矩阵乘法按行展开为
+\[
+  M_{new}(i,:) = M(i,:)Q.
+\]
+每一行只依赖原矩阵同一行的数据，不依赖其他行。因此，将行集合划分给不同线程并行执行，与串行逐行执行得到相同的数学结果，也不存在多个线程写同一个元素的数据竞争。
+
+综上，优化版并没有改变 Golub--Kahan 迭代施加的正交相似/等价变换序列，只是改变了这些变换在程序中的执行组织方式。因此在忽略浮点舍入微小差异时，优化版与原串行算法等价；实验中的重构误差和正交性误差也验证了这一点。
+\subsection{pthread 动态任务调度}
+
+pthread 版本默认使用 8 个总线程，其中主线程也参与计算，即最多创建 7 个子线程。这与实验指导书中建议的线程组织方式一致。
+
+每轮迭代中，主线程根据 active blocks 构造任务数组，并按 block 长度从大到小排序。各线程通过原子计数器动态领取任务：
+
+\begin{lstlisting}[caption={pthread 动态任务领取思想}]
+while (true) {
+    int id = next_task.fetch_add(1);
+    if (id >= tasks.size()) break;
+    one_block_step_logged(B, tasks[id].l, tasks[id].r, tasks[id].log);
+}
+\end{lstlisting}
+
+任务完成后，主线程按串行版本一致的顺序合并所有 block 的旋转日志，然后所有线程按行区间并行更新 $U,V$。这样既避免了频繁创建销毁线程，也避免了对 $U,V$ 加锁。
+
+\subsection{OpenMP 实现}
+
+OpenMP 版本使用外层 \texttt{parallel} 区域，避免每轮迭代反复 fork-join。初版 OpenMP 曾使用 \texttt{omp for schedule(dynamic,1)} 调度 block，并用两个 \texttt{omp for schedule(static)} 更新 $U,V$。在课程服务器上，该写法的 work-sharing 和隐式 barrier 开销较大。
+
+因此，最终 OpenMP 版本也采用显式 \texttt{atomic} 任务计数器，并手动按线程号划分 $U,V$ 的行区间。同时调用 \texttt{omp\_set\_dynamic(0)} 固定线程数，避免运行时系统动态缩减线程。
+
+\begin{lstlisting}[caption={OpenMP 版本中的手动任务分发和行划分}]
+omp_set_dynamic(0);
+omp_set_num_threads(thread_count);
+
+#pragma omp parallel num_threads(thread_count)
+{
+    int tid = omp_get_thread_num();
+    int team_size = omp_get_num_threads();
+
+    // block phase: atomic fetch_add 领取任务
+    // U/V phase: 每个线程处理连续行区间
+    int u_begin = U.rows() * tid / team_size;
+    int u_end   = U.rows() * (tid + 1) / team_size;
+    apply_rots_to_rows(U, all_u_rots, u_begin, u_end);
+}
+\end{lstlisting}
+
+\section{正确性验证}
+
+测试程序会对 5 组样例进行验证：固定 $5\times5$ 矩阵、随机 $8\times8$ 矩阵、近秩亏损 $10\times8$ 矩阵、随机 $10\times8$ 矩阵以及随机 $1000\times1000$ 矩阵。每组样例均检查收敛情况、重构误差、$U,V$ 正交性、对角结构、奇异值降序和非负性。
+
+三种版本在三次服务器测试中均通过全部 5 组样例。以 OpenMP 版本一次 $1000\times1000$ 测试为例：相对重构误差为 $3.19445\times 10^{-13}$，$\|U^TU-I\|_F=2.38537\times 10^{-13}$，$\|V^TV-I\|_F=2.35243\times 10^{-13}$，对角结构误差为 0，测试结果为 PASS。
+
+\begin{table}[H]
+\centering
+\caption{正确性测试汇总}
+\begin{tabular}{lccc}
+\toprule
+版本 & 测试次数 & 每次样例数 & 通过情况 \\
+\midrule
+serial-origin & 3 & 5 & 15 / 15 PASS \\
+pthread-optimized & 3 & 5 & 15 / 15 PASS \\
+OpenMP-optimized & 3 & 5 & 15 / 15 PASS \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{实验环境与方法}
+
+实验使用课程服务器提供的自动测试脚本运行。脚本编译命令为
+
+\begin{lstlisting}[language=bash,caption={测试脚本中的编译命令}]
+g++ main.cpp gkh.cpp bidiagonalization.cpp -o main "$OPT_FLAG" \
+    -fopenmp -lpthread -std=c++17
+\end{lstlisting}
+
+本次记录的服务器结果均使用随机种子 \texttt{2412439}，编译优化等级为脚本默认或指定的 \texttt{-O2}。pthread 与 OpenMP 版本默认总线程数均为 8。
+
+\textbf{待补充：}课程服务器的 CPU 型号、内存规格、GCC 版本、作业调度系统实际分配的节点和核心数。后续可以在提交脚本中加入 \texttt{lscpu}、\texttt{g++ --version} 等命令，将硬件与编译器信息记录到报告附录。
+
+\section{性能结果}
+
+\subsection{大规模样例耗时}
+
+表\ref{tab:large_raw} 给出随机 $1000\times1000$ 样例在三次测试中的耗时。由于本实验只优化 GKH 迭代部分，上二对角化阶段的耗时主要用于说明总耗时构成，不作为优化重点。
+
+\begin{table}[H]
+\centering
+\caption{$1000\times1000$ 样例三次测试耗时（单位：ms）}
+\label{tab:large_raw}
+\begin{tabular}{llrr}
+\toprule
+版本 & 测试 & 上二对角化 & GKH 迭代 \\
+\midrule
+serial-origin & 1 & 9471.20 & 33250.70 \\
+serial-origin & 2 & 8695.81 & 32482.10 \\
+serial-origin & 3 & 9005.72 & 32660.60 \\
+\midrule
+pthread-optimized & 1 & 9387.19 & 7713.29 \\
+pthread-optimized & 2 & 7729.00 & 5174.41 \\
+pthread-optimized & 3 & 8808.17 & 5379.28 \\
+\midrule
+OpenMP-optimized & 1 & 7310.88 & 5746.41 \\
+OpenMP-optimized & 2 & 7900.69 & 5426.43 \\
+OpenMP-optimized & 3 & 9192.05 & 5252.86 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+三次测试取平均后，GKH 阶段的性能如表\ref{tab:avg_speedup} 所示。
+
+\begin{table}[H]
+\centering
+\caption{$1000\times1000$ 样例平均耗时与加速比}
+\label{tab:avg_speedup}
+\begin{tabular}{lrrrr}
+\toprule
+版本 & 上二对角化均值 & GKH 均值 & GKH 加速比 & 总耗时加速比 \\
+\midrule
+serial-origin & 9057.58 & 32797.80 & 1.00 & 1.00 \\
+pthread-optimized & 8641.45 & 6088.99 & 5.39 & 2.84 \\
+OpenMP-optimized & 8134.54 & 5475.23 & 5.99 & 3.08 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    width=0.82\textwidth,
+    height=7cm,
+    bar width=22pt,
+    ylabel={GKH 平均耗时 / ms},
+    symbolic x coords={origin,pthread,OpenMP},
+    xtick=data,
+    ymin=0,
+    nodes near coords,
+    nodes near coords align={vertical},
+    enlarge x limits=0.25
+]
+\addplot coordinates {(origin,32797.80) (pthread,6088.99) (OpenMP,5475.23)};
+\end{axis}
+\end{tikzpicture}
+\caption{$1000\times1000$ 样例 GKH 阶段平均耗时对比}
+\end{figure}
+
+\subsection{结果分析}
+
+从表\ref{tab:avg_speedup} 可以看出，pthread 版本在 GKH 阶段达到约 $5.39\times$ 加速，OpenMP 版本达到约 $5.99\times$ 加速。OpenMP 版本最终略快于 pthread，主要原因是经过修改后 OpenMP 版本避免了每轮多次 \texttt{omp for} work-sharing 调度，改用接近 pthread 的 atomic 任务领取和手动行划分。
+
+总耗时加速比低于 GKH 加速比，这是因为 \texttt{to\_bidiagonal} 所在的上二对角化阶段没有被并行优化。在优化后版本中，GKH 阶段已经从原来的约 32.8s 降到约 5.5--6.1s，而上二对角化仍需约 8--9s，成为总耗时中的重要部分。因此，如果继续优化，下一步应考虑 Householder 上二对角化中的矩阵-向量乘与 rank-1 更新。
+
+小规模样例中并行版本不一定更快。原因是 $5\times5$、$8\times8$、$10\times8$ 的实际计算量很小，线程同步、barrier、任务构造和日志合并的固定开销已经超过了计算收益。这也说明本实验优化主要面向大规模 dense SVD 场景。
+
+\section{同步与数据竞争分析}
+
+本实验中需要重点避免 $B,U,V$ 三类矩阵上的并发写冲突。
+
+对于 $B$，\texttt{split\_active\_blocks} 根据已经收敛为 0 的超对角线将问题切分为若干闭区间 $[l,r]$。优化后的 GKH step 只在 block 内更新 $B[l:r,l:r]$，不同 block 之间写入范围不重叠，因此 block phase 不需要对 $B$ 加锁。
+
+对于 $U,V$，每个 block 产生的旋转只涉及该 block 内的相邻列。数学上，不同 block 对应的列集合互不相交。实现上进一步采用旋转日志和按行批量更新：每个线程只负责 $U,V$ 的一段连续行，因此任意两个线程不会写同一个矩阵元素。这样避免了对 dense $U,V$ 的列锁或全局锁。
+
+同步点主要包括：block phase 结束后等待所有任务完成、合并 rotation logs、$U$ 更新结束后再更新 $V$。pthread 版本用自定义 barrier 实现，OpenMP 版本用外层 parallel 区域中的 barrier 与 single 实现。
+
+\section{Profiling 分析}
+
+为进一步分析优化效果，本实验对 serial-origin、pthread-optimized 和 OpenMP-optimized 三个版本使用 Linux \texttt{perf} 工具进行了 profiling。总体计数使用 \texttt{perf stat -r 3 -d -d -d} 重复运行三次，热点函数使用 \texttt{perf record} 与 \texttt{perf report --stdio} 生成文本报告。当前目录中已保存的文件包括：\texttt{perf\_stat\_origin.txt}、\texttt{perf\_report\_origin.txt}、\texttt{perf\_stat\_pthread.txt}、\texttt{perf\_report\_pthread.txt}、\texttt{perf\_stat\_openmp.txt} 以及 \texttt{perf\_report\_openmp.txt}。
+
+需要特别说明的是，受课程平台使用方式限制，profiling 只能在登录节点完成，无法像自动测试一样申请到独占或较稳定的计算资源。因此，\texttt{perf stat} 中的 elapsed time 不用于计算或比较最终加速比；本文主要使用 profiling 的热点函数分布、指令与周期计数、cache/TLB miss rate 以及同步相关函数占比来解释性能瓶颈和优化效果。最终性能和加速比仍以前文自动测试脚本在课程服务器上的三次运行结果为准。
+
+\subsection{总体硬件事件统计}
+
+表\ref{tab:perf_stat} 总结了三种版本的主要硬件事件。需要说明的是，perf 统计的是完整程序，包括上二对角化、GKH 迭代以及正确性检查中的矩阵乘法，因此它和前文单独统计的 GKH 时间不是同一个口径；表中的 elapsed time 只作为 profiling 运行记录保留，不作为性能对比依据。
+
+\begin{table}[H]
+\centering
+\caption{perf stat 总体硬件事件统计（三次运行平均）}
+\label{tab:perf_stat}
+\begin{tabular}{lrrrrrr}
+\toprule
+版本 & elapsed(s) & cycles($10^9$) & instr.($10^9$) & IPC & L1D miss & dTLB miss \\
+\midrule
+serial-origin & 48.915 & 121.08 & 118.95 & 0.98 & 4.64\% & 2.19\% \\
+pthread-optimized & 46.335 & 93.90 & 98.94 & 1.05 & 1.72\% & 0.79\% \\
+OpenMP-optimized & 101.600 & 101.71 & 186.15 & 1.83 & 1.26\% & 0.54\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+从表\ref{tab:perf_stat} 可以看到，pthread 优化版相比串行版显著减少了周期数和指令数：周期数从 $121.08\times10^9$ 降至 $93.90\times10^9$，指令数从 $118.95\times10^9$ 降至 $98.94\times10^9$。这说明优化并不只是依靠多线程并行执行，还通过 $B$ 的 block-local 更新、删除全矩阵 cleanup 和延迟累积 $U/V$ 减少了实际工作量。
+
+内存层次方面，pthread 版本的 L1 data cache miss rate 从 4.64\% 降至 1.72\%，dTLB miss rate 从 2.19\% 降至 0.79\%。这与优化设计相吻合：原始版本反复对 dense 矩阵做整列更新，访存跨步较大；优化后将 $U,V$ 的更新改为按行批量应用旋转，访问模式更加连续，因此 L1D 和 dTLB 行为明显改善。
+
+OpenMP 版本的 L1D miss rate 和 dTLB miss rate 也较低，分别为 1.26\% 和 0.54\%。但是当前 \texttt{perf\_stat\_openmp.txt} 显示 elapsed time 为 101.60s，明显慢于自动测试中最终 OpenMP 版本的运行时间。该现象主要来自登录节点共享环境、线程调度状态和 perf 采样开销，与自动测试的运行环境并不一致；因此本文保留 OpenMP 的硬件事件和热点分布作为辅助分析，但最终性能结论仍以前文三次自动测试的时间为准。
+
+\subsection{热点函数对比}
+
+serial-origin 的 \texttt{perf report} 显示，程序最主要热点在 GKH 阶段。\texttt{gkh\_svd\_from\_bidiagonal} 占 59.03\%，其中 \texttt{one\_block\_step} 占 40.04\%。进一步展开可见，\texttt{apply\_right\_cols} 自身占 39.57\%，\texttt{cleanup\_bidiagonal} 占 12.35\%，\texttt{apply\_left\_rows} 占 6.48\%。这些数据说明原始代码的主要瓶颈正是对 dense $B,U,V$ 的整行/整列旋转更新，以及每轮全矩阵 cleanup。
+
+\begin{table}[H]
+\centering
+\caption{serial-origin 主要热点函数}
+\label{tab:perf_origin_hotspot}
+\begin{tabular}{lrr}
+\toprule
+函数 & Children & Self \\
+\midrule
+\texttt{gkh\_svd\_from\_bidiagonal} & 59.03\% & 0.35\% \\
+\texttt{one\_block\_step} & 40.04\% & 0.00\% \\
+\texttt{apply\_right\_cols} & 39.57\% & 39.57\% \\
+\texttt{to\_bidiagonal} & 24.87\% & 24.87\% \\
+\texttt{Matrix::operator*} & 16.05\% & 16.05\% \\
+\texttt{cleanup\_bidiagonal} & 12.35\% & 12.35\% \\
+\texttt{apply\_left\_rows} & 6.48\% & 6.48\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+pthread-optimized 的热点分布发生了明显变化。\texttt{apply\_rots\_to\_rows} 成为最大热点，占 45.85\%，说明 Givens 日志延迟累积后，dense $U,V$ 的批量行更新成为主要计算工作。\texttt{run\_block\_phase} 占 11.82\%，其中 \texttt{one\_block\_step\_logged} 占 11.79\%，远低于串行版本中 \texttt{one\_block\_step} 的 40.04\%。这说明 block-local 更新有效压缩了 bulge chasing 的访存范围。
+
+\begin{table}[H]
+\centering
+\caption{pthread-optimized 主要热点函数}
+\label{tab:perf_pthread_hotspot}
+\begin{tabular}{lrr}
+\toprule
+函数 & Children & Self \\
+\midrule
+\texttt{apply\_rots\_to\_rows} & 45.85\% & 45.85\% \\
+\texttt{to\_bidiagonal} & 24.61\% & 24.60\% \\
+\texttt{Matrix::operator*} & 16.37\% & 16.37\% \\
+\texttt{run\_block\_phase} & 11.82\% & 5.01\% \\
+\texttt{one\_block\_step\_logged} & 11.79\% & 0.00\% \\
+\texttt{gkh\_svd\_from\_bidiagonal} & 9.32\% & 0.17\% \\
+\texttt{apply\_left\_rows\_B\_block} & 6.63\% & 6.63\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+值得注意的是，pthread 版本中 \texttt{barrier\_wait} 只占 0.22\%，\texttt{pthread\_cond\_wait} 只占 0.14\%，\texttt{merge\_task\_logs} 约 0.12\%。因此，该实现的同步与日志合并开销较小，性能主要受 $U,V$ 的批量行更新和未优化的 \texttt{to\_bidiagonal} 限制。
+
+OpenMP-optimized 的 \texttt{perf report} 进一步表明，OpenMP 版本的计算热点和 pthread 版本基本一致：\texttt{apply\_rots\_to\_rows} 占 33.37\%，仍是最大单体热点；\texttt{one\_block\_step\_logged} 占 10.39\%，其中 block-local 的 \texttt{apply\_left\_rows\_B\_block} 占 6.76\%，\texttt{apply\_right\_cols\_B\_block} 占 2.26\%。此外，\texttt{to\_bidiagonal} 占 21.60\%，\texttt{Matrix::operator*} 占 14.76\%，说明未优化的上二对角化和正确性验证中的矩阵乘法仍然占据总程序中的较大比例。
+
+\begin{table}[H]
+\centering
+\caption{OpenMP-optimized 主要热点函数}
+\label{tab:perf_openmp_hotspot}
+\begin{tabular}{lrr}
+\toprule
+函数 & Children & Self \\
+\midrule
+\texttt{gkh\_svd\_from\_bidiagonal} & 63.28\% & 0.00\% \\
+\texttt{apply\_rots\_to\_rows} & 33.37\% & 33.37\% \\
+\texttt{to\_bidiagonal} & 21.60\% & 21.52\% \\
+\texttt{Matrix::operator*} & 14.76\% & 14.76\% \\
+\texttt{libgomp runtime addr. 0x1c4ec} & 12.86\% & 12.86\% \\
+\texttt{one\_block\_step\_logged} & 10.39\% & 3.64\% \\
+\texttt{GOMP\_parallel} & 7.92\% & 0.00\% \\
+\texttt{apply\_left\_rows\_B\_block} & 6.76\% & 6.76\% \\
+\texttt{libgomp runtime addr. 0x1c4e0} & 6.16\% & 6.16\% \\
+\texttt{apply\_right\_cols\_B\_block} & 2.26\% & 0.00\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+表\ref{tab:perf_openmp_hotspot} 中有两个 \texttt{libgomp} 内部地址未能被 \texttt{perf report} 完整解析为函数名，合计约 19.02\%。结合调用栈中出现的 \texttt{GOMP\_parallel}，可以判断这部分来自 OpenMP 运行时内部开销或等待开销，但不能在没有调试符号的情况下进一步精确归因到具体 barrier 或调度函数。这个结果也解释了为什么 OpenMP 的算法热点与 pthread 类似，但 profiling 的 elapsed time 更不稳定：OpenMP 版本依赖运行时调度和隐式同步，运行环境变化会更明显地影响整体墙钟时间。
+
+\subsection{Profiling 结论}
+
+综合硬件事件和热点函数结果，可以得到以下结论：
+
+\begin{enumerate}
+  \item 原始版本的主要瓶颈是 \texttt{apply\_right\_cols}、\texttt{apply\_left\_rows} 和 \texttt{cleanup\_bidiagonal}。这些函数都体现出对矩阵大范围行列扫描的代价，验证了优化前关于 dense 更新和全矩阵 cleanup 的瓶颈判断。
+  \item pthread 优化后，\texttt{one\_block\_step} 的热点占比大幅下降，说明 $B$ 的 block-local 更新减少了无效访存；最大热点转移到 \texttt{apply\_rots\_to\_rows}，说明当前主要工作变为 $U,V$ 的批量行更新。
+  \item OpenMP 版本的热点结构与 pthread 版本一致，最大热点同样是 \texttt{apply\_rots\_to\_rows}，说明两种实现的核心算法改造相同；额外出现的 \texttt{libgomp} 与 \texttt{GOMP\_parallel} 开销则体现了 OpenMP 运行时调度和隐式同步的成本。
+  \item cache 和 TLB 指标明显改善。pthread 版本 L1D miss rate 从 4.64\% 降到 1.72\%，dTLB miss rate 从 2.19\% 降到 0.79\%，说明按行批量应用旋转比原来的列式即时更新更加符合行主序存储。
+  \item 同步开销不是 pthread 版本的主要问题。\texttt{barrier\_wait} 与 \texttt{pthread\_cond\_wait} 占比均低于 0.3\%，表明动态任务领取和阶段式 barrier 的额外开销较小。
+  \item 优化后的下一瓶颈是 \texttt{to\_bidiagonal} 和验证阶段的 \texttt{Matrix::operator*}。其中 \texttt{to\_bidiagonal} 在 pthread 版本中占 24.61\%，说明若继续优化总耗时，应考虑并行化 Householder 上二对角化；\texttt{Matrix::operator*} 主要来自正确性验证，不属于 SVD 核心算法。
+\end{enumerate}
+
+\textbf{仍待补充：}若后续希望更精确地区分 OpenMP 的隐式 barrier、动态调度和线程等待成本，可以在服务器上额外使用 \texttt{perf sched}、\texttt{perf lock} 或带调试符号的 \texttt{libgomp} 重新采样；也可以在代码内加入每线程计时，从应用层统计 block phase、row-apply phase 和 barrier wait 的占比。
+
+\section{结论}
+
+本实验围绕 SVD 框架中的 \texttt{gkh\_svd\_from\_bidiagonal} 函数进行了 pthread 与 OpenMP 多线程优化。最终实现并不是简单并行 block 循环，而是采用了 $B$ 矩阵 block-local 更新、Givens 旋转日志、$U/V$ 延迟批量行更新以及动态任务调度。
+
+在课程服务器三次测试中，所有版本均通过 5 组正确性测试。对于 $1000\times1000$ 大规模样例，pthread 版本将 GKH 阶段平均耗时从 32797.80ms 降至 6088.99ms，OpenMP 版本降至 5475.23ms，分别取得约 $5.39\times$ 和 $5.99\times$ 的 GKH 阶段加速。由于上二对角化阶段尚未优化，整体加速比分别为约 $2.84\times$ 和 $3.08\times$。
+
+后续若继续提高总性能，优先方向应是并行化 Householder 上二对角化，并补充 profiling 数据来量化同步开销、负载均衡和内存带宽瓶颈。
+
+\appendix
+\section{实验文件说明}
+
+本次实验相关目录如下：
+
+\begin{itemize}
+  \item \texttt{svd\_multi/svd\_origin}: 原始串行版本。
+  \item \texttt{svd\_multi/svd\_pthread}: pthread 优化版本。
+  \item \texttt{svd\_multi/svd\_openMP}: OpenMP 优化版本。
+  \item 各目录下的 \texttt{test/}: 课程服务器自动测试输出。
+\end{itemize}
+
+\section{与大模型协作记录}
+
+本实验中使用生成式 AI 辅助阅读实验指导书、分析 GKH 迭代并讨论并行化方案。报告提交前应按课程要求整理完整对话记录，作为附录单独提交或附在本文档之后。
+
+\begin{thebibliography}{9}
+\bibitem{lab3pthread} 并行程序设计实验指导书：pthread 编程，2026。
+\bibitem{lab3openmp} 并行程序设计实验指导书：OpenMP 编程，2026。
+\bibitem{golub} Gene H. Golub and Charles F. Van Loan. \textit{Matrix Computations}. Johns Hopkins University Press.
+\end{thebibliography}
+
+\end{document}
+
+
+

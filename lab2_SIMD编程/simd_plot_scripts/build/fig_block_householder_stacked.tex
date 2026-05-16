@@ -1,0 +1,84 @@
+
+\documentclass[tikz,border=4pt]{standalone}
+\usepackage{fontspec}
+\usepackage{xeCJK}
+\IfFontExistsTF{Arial}{\setmainfont{Arial}}{\setmainfont{TeX Gyre Heros}}
+\IfFontExistsTF{Consolas}{\setmonofont{Consolas}}{\setmonofont{Courier New}}
+\IfFontExistsTF{Microsoft YaHei}{
+  \setCJKmainfont{Microsoft YaHei}
+  \setCJKsansfont{Microsoft YaHei}
+  \setCJKmonofont{Microsoft YaHei}
+}{
+  \setCJKmainfont{SimHei}
+  \setCJKsansfont{SimHei}
+  \setCJKmonofont{SimHei}
+}
+\usepackage{pgfplots}
+\usepgfplotslibrary{groupplots}
+\pgfplotsset{compat=1.18}
+\definecolor{cBlue}{HTML}{4477AA}
+\definecolor{cCyan}{HTML}{66CCEE}
+\definecolor{cGreen}{HTML}{228833}
+\definecolor{cOrange}{HTML}{CCBB44}
+\definecolor{cRed}{HTML}{EE6677}
+\definecolor{cPurple}{HTML}{AA3377}
+\definecolor{cGray}{HTML}{667085}
+\definecolor{cGrid}{HTML}{E0E0E0}
+\pgfplotsset{
+  nature axis/.style={
+    axis x line*=bottom,
+    axis y line*=left,
+    axis line style={black, line width=1.15pt},
+    tick align=outside,
+    tick style={black, line width=0.75pt},
+    major tick length=3pt,
+    minor tick length=2pt,
+    clip marker paths=true,
+    axis on top=false,
+    ymajorgrids=true,
+    xmajorgrids=false,
+    grid style={draw=cGrid, dashed, line width=0.45pt},
+    title style={font=\sffamily\fontsize{12}{14}\selectfont\bfseries},
+    label style={font=\sffamily\fontsize{11}{13}\selectfont},
+    tick label style={font=\sffamily\fontsize{10}{12}\selectfont},
+    legend style={
+      font=\sffamily\fontsize{9}{11}\selectfont,
+      draw=none,
+      fill=none,
+      cells={anchor=west},
+      /tikz/every even column/.append style={column sep=0.35cm}
+    },
+  },
+  every axis/.append style={
+    nature axis
+  }
+}
+
+\begin{document}
+\begin{tikzpicture}
+\begin{axis}[
+  width=13.2cm,
+  height=5.2cm,
+  xbar stacked,
+  bar width=13pt,
+  xmin=0,
+  xmax=45,
+  clip=false,
+  xlabel={随机 1000×1000 总时间/s},
+  symbolic y coords={block,simd,orig},
+  ytick={orig,simd,block},
+  yticklabels={原始版本, 二路 SIMD, 分块 Householder + SIMD},
+  enlarge y limits=0.22,
+  xmajorgrids=true,
+  ymajorgrids=false,
+  legend style={at={(0.5,1.08)}, anchor=south, legend columns=2},
+]
+\addplot+[draw=black, line width=0.35pt, fill=cBlue!72] coordinates {(7.97345,orig) (4.24466,simd) (2.81202,block)};
+\addplot+[draw=black, line width=0.35pt, fill=cRed!58] coordinates {(30.61480,orig) (27.02053,simd) (30.28627,block)};
+\node[anchor=west, font=\sffamily\fontsize{8.6}{10}\selectfont, text=cGray] at (axis cs:39.13825,orig) {38.59 s};
+\node[anchor=west, font=\sffamily\fontsize{8.6}{10}\selectfont, text=cGray] at (axis cs:31.81519,simd) {31.27 s};
+\node[anchor=west, font=\sffamily\fontsize{8.6}{10}\selectfont, text=cGray] at (axis cs:33.64829,block) {33.10 s};
+\legend{上二对角化, GKH 迭代}
+\end{axis}
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,89 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand*\HyPL@Entry[1]{}
+\HyPL@Entry{0<</P()>>}
+\HyPL@Entry{1<</P()>>}
+\HyPL@Entry{2<</S/D>>}
+\@writefile{toc}{\contentsline {section}{摘要}{1}{section*.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {1}实验背景与目标}{1}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.1}SVD 分解问题简介}{1}{subsection.1.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.2}Golub-Kahan 算法与实验框架}{1}{subsection.1.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.3}实验目标}{1}{subsection.1.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}实验环境}{1}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}硬件环境}{1}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}软件环境}{2}{subsection.2.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces 实验软件环境}}{2}{table.1}\protected@file@percent }
+\newlabel{tab:software}{{1}{2}{实验软件环境}{table.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}基础要求}{2}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}基础要求概述}{2}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}代码改动对比}{2}{subsection.3.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces SVD SIMD 优化代码改动对比}}{2}{table.2}\protected@file@percent }
+\newlabel{tab:code-diff}{{2}{2}{SVD SIMD 优化代码改动对比}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}简单矩阵旋转的 SIMD 加速}{2}{subsection.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.1}串行计算逻辑}{2}{subsubsection.3.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.2}SIMD 设计思路}{2}{subsubsection.3.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.3}关键代码说明}{3}{subsubsection.3.3.3}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces gkh.cpp 中 apply\_left\_rows 的 SIMD 核心代码}}{3}{algorithm.1}\protected@file@percent }
+\newlabel{alg:gkh-left-rows}{{1}{3}{关键代码说明}{algorithm.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Householder 上二对角化的 SIMD 加速}{3}{subsection.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.1}计算过程分析}{3}{subsubsection.3.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.2}可向量化循环}{3}{subsubsection.3.4.2}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {2}{\ignorespaces bidiagonalization.cpp 中 axpy\_simd 的 SIMD 核心代码}}{4}{algorithm.2}\protected@file@percent }
+\newlabel{alg:axpy-simd}{{2}{4}{可向量化循环}{algorithm.2}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.3}正确性处理}{4}{subsubsection.3.4.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces 代表性正确性测试结果（\texttt  {-O2}）}}{4}{table.3}\protected@file@percent }
+\newlabel{tab:correctness}{{3}{4}{代表性正确性测试结果（\texttt {-O2}）}{table.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}基础性能测试}{5}{subsection.3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.1}测试方法}{5}{subsubsection.3.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.2}串行版本与 SIMD 版本性能对比}{5}{subsubsection.3.5.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces 不同编译选项下串行版本与 SIMD 版本性能对比（三次平均）}}{5}{table.4}\protected@file@percent }
+\newlabel{tab:base-performance}{{4}{5}{不同编译选项下串行版本与 SIMD 版本性能对比（三次平均）}{table.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces 不同编译选项与矩阵规模下 SIMD 加速比对比}}{5}{figure.1}\protected@file@percent }
+\newlabel{fig:base-speedup}{{1}{5}{不同编译选项与矩阵规模下 SIMD 加速比对比}{figure.1}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.3}基础结果分析}{5}{subsubsection.3.5.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6}Profiling 分析}{6}{subsection.3.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.6.1}Profiling 方法}{6}{subsubsection.3.6.1}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {3}{\ignorespaces Profiling 命令}}{6}{algorithm.3}\protected@file@percent }
+\newlabel{alg:profiling-command}{{3}{6}{Profiling 方法}{algorithm.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Profiling 采样结果概要}}{6}{table.5}\protected@file@percent }
+\newlabel{tab:profiling-summary}{{5}{6}{Profiling 采样结果概要}{table.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces \texttt  {perf stat} 硬件事件统计}}{6}{table.6}\protected@file@percent }
+\newlabel{tab:perf-stat-summary}{{6}{6}{\texttt {perf stat} 硬件事件统计}{table.6}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.6.2}热点函数与瓶颈}{7}{subsubsection.3.6.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Profiling 热点函数}}{7}{table.7}\protected@file@percent }
+\newlabel{tab:profiling}{{7}{7}{Profiling 热点函数}{table.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.7}不同并行度的性能对比}{7}{subsection.3.7}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces 不同 SIMD 展开粒度性能对比（\texttt  {-O2}，三次平均）}}{8}{table.8}\protected@file@percent }
+\newlabel{tab:simd-width}{{8}{8}{不同 SIMD 展开粒度性能对比（\texttt {-O2}，三次平均）}{table.8}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces 随机 \(1000\times 1000\) 样例上不同 SIMD 展开粒度的分阶段耗时对比}}{8}{figure.2}\protected@file@percent }
+\newlabel{fig:simd-width}{{2}{8}{随机 \(1000\times 1000\) 样例上不同 SIMD 展开粒度的分阶段耗时对比}{figure.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.8}不同编译优化选项对性能的影响}{8}{subsection.3.8}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces 不同编译优化选项性能对比}}{8}{table.9}\protected@file@percent }
+\newlabel{tab:compile-options}{{9}{8}{不同编译优化选项性能对比}{table.9}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}进阶要求}{9}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}进阶要求概述}{9}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}手工编写的 SIMD 程序与编译器自动向量化版本的对比}{9}{subsection.4.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces 手工 SIMD 与编译器自动向量化版本性能对比（随机 \(1000\times 1000\)，\texttt  {-O2}）}}{9}{table.10}\protected@file@percent }
+\newlabel{tab:auto-vs-manual}{{10}{9}{手工 SIMD 与编译器自动向量化版本性能对比（随机 \(1000\times 1000\)，\texttt {-O2}）}{table.10}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces 自动向量化与手工 SIMD 的登录节点辅助计时（随机 \(1000\times 1000\)，三次平均）}}{9}{table.11}\protected@file@percent }
+\newlabel{tab:auto-profiling-time}{{11}{9}{自动向量化与手工 SIMD 的登录节点辅助计时（随机 \(1000\times 1000\)，三次平均）}{table.11}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces 自动向量化与手工 SIMD 的登录节点 \texttt  {perf stat} 结果}}{10}{table.12}\protected@file@percent }
+\newlabel{tab:auto-profiling-stat}{{12}{10}{自动向量化与手工 SIMD 的登录节点 \texttt {perf stat} 结果}{table.12}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces GCC 自动向量化报告摘要}}{10}{table.13}\protected@file@percent }
+\newlabel{tab:vec-report}{{13}{10}{GCC 自动向量化报告摘要}{table.13}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}不同平台 SIMD 并行化的对比实验及性能分析}{10}{subsection.4.3}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {4}{\ignorespaces 不同平台对比实验的编译命令}}{11}{algorithm.4}\protected@file@percent }
+\newlabel{alg:platform-compile}{{4}{11}{不同平台 SIMD 并行化的对比实验及性能分析}{algorithm.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces ARM NEON 与 x86 AVX 在本实验中的架构差异}}{11}{table.14}\protected@file@percent }
+\newlabel{tab:platform-arch}{{14}{11}{ARM NEON 与 x86 AVX 在本实验中的架构差异}{table.14}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces 不同平台 SIMD 并行化性能对比（随机 \(1000\times 1000\)）}}{11}{table.15}\protected@file@percent }
+\newlabel{tab:platform-compare}{{15}{11}{不同平台 SIMD 并行化性能对比（随机 \(1000\times 1000\)）}{table.15}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}其他算法优化策略：分块 Householder 变换}{12}{subsection.4.4}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {5}{\ignorespaces 分块 Householder 原型伪代码}}{12}{algorithm.5}\protected@file@percent }
+\newlabel{alg:block-householder}{{5}{12}{其他算法优化策略：分块 Householder 变换}{algorithm.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {16}{\ignorespaces 分块 Householder 优化性能对比（随机 \(1000\times 1000\)，\texttt  {-O2}，三次平均）}}{12}{table.16}\protected@file@percent }
+\newlabel{tab:block-householder}{{16}{12}{分块 Householder 优化性能对比（随机 \(1000\times 1000\)，\texttt {-O2}，三次平均）}{table.16}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces 随机 \(1000\times 1000\) 样例上分块 Householder 与原始、二路 SIMD 的分阶段耗时对比}}{13}{figure.3}\protected@file@percent }
+\newlabel{fig:block-householder}{{3}{13}{随机 \(1000\times 1000\) 样例上分块 Householder 与原始、二路 SIMD 的分阶段耗时对比}{figure.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}总结}{13}{section.5}\protected@file@percent }
+\gdef \@abspage@last{15}

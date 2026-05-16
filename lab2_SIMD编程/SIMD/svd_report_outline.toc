@@ -1,0 +1,34 @@
+\contentsline {section}{摘要}{1}{section*.1}%
+\contentsline {section}{\numberline {1}实验背景与目标}{1}{section.1}%
+\contentsline {subsection}{\numberline {1.1}SVD 分解问题简介}{1}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Golub-Kahan 算法与实验框架}{1}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}实验目标}{1}{subsection.1.3}%
+\contentsline {section}{\numberline {2}实验环境}{1}{section.2}%
+\contentsline {subsection}{\numberline {2.1}硬件环境}{1}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}软件环境}{2}{subsection.2.2}%
+\contentsline {section}{\numberline {3}基础要求}{2}{section.3}%
+\contentsline {subsection}{\numberline {3.1}基础要求概述}{2}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}代码改动对比}{2}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}简单矩阵旋转的 SIMD 加速}{2}{subsection.3.3}%
+\contentsline {subsubsection}{\numberline {3.3.1}串行计算逻辑}{2}{subsubsection.3.3.1}%
+\contentsline {subsubsection}{\numberline {3.3.2}SIMD 设计思路}{2}{subsubsection.3.3.2}%
+\contentsline {subsubsection}{\numberline {3.3.3}关键代码说明}{3}{subsubsection.3.3.3}%
+\contentsline {subsection}{\numberline {3.4}Householder 上二对角化的 SIMD 加速}{3}{subsection.3.4}%
+\contentsline {subsubsection}{\numberline {3.4.1}计算过程分析}{3}{subsubsection.3.4.1}%
+\contentsline {subsubsection}{\numberline {3.4.2}可向量化循环}{3}{subsubsection.3.4.2}%
+\contentsline {subsubsection}{\numberline {3.4.3}正确性处理}{4}{subsubsection.3.4.3}%
+\contentsline {subsection}{\numberline {3.5}基础性能测试}{5}{subsection.3.5}%
+\contentsline {subsubsection}{\numberline {3.5.1}测试方法}{5}{subsubsection.3.5.1}%
+\contentsline {subsubsection}{\numberline {3.5.2}串行版本与 SIMD 版本性能对比}{5}{subsubsection.3.5.2}%
+\contentsline {subsubsection}{\numberline {3.5.3}基础结果分析}{5}{subsubsection.3.5.3}%
+\contentsline {subsection}{\numberline {3.6}Profiling 分析}{6}{subsection.3.6}%
+\contentsline {subsubsection}{\numberline {3.6.1}Profiling 方法}{6}{subsubsection.3.6.1}%
+\contentsline {subsubsection}{\numberline {3.6.2}热点函数与瓶颈}{7}{subsubsection.3.6.2}%
+\contentsline {subsection}{\numberline {3.7}不同并行度的性能对比}{7}{subsection.3.7}%
+\contentsline {subsection}{\numberline {3.8}不同编译优化选项对性能的影响}{8}{subsection.3.8}%
+\contentsline {section}{\numberline {4}进阶要求}{9}{section.4}%
+\contentsline {subsection}{\numberline {4.1}进阶要求概述}{9}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}手工编写的 SIMD 程序与编译器自动向量化版本的对比}{9}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}不同平台 SIMD 并行化的对比实验及性能分析}{10}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}其他算法优化策略：分块 Householder 变换}{12}{subsection.4.4}%
+\contentsline {section}{\numberline {5}总结}{13}{section.5}%

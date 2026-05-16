@@ -1,0 +1,80 @@
+
+\documentclass[tikz,border=4pt]{standalone}
+\usepackage{fontspec}
+\usepackage{xeCJK}
+\IfFontExistsTF{Arial}{\setmainfont{Arial}}{\setmainfont{TeX Gyre Heros}}
+\IfFontExistsTF{Consolas}{\setmonofont{Consolas}}{\setmonofont{Courier New}}
+\IfFontExistsTF{Microsoft YaHei}{
+  \setCJKmainfont{Microsoft YaHei}
+  \setCJKsansfont{Microsoft YaHei}
+  \setCJKmonofont{Microsoft YaHei}
+}{
+  \setCJKmainfont{SimHei}
+  \setCJKsansfont{SimHei}
+  \setCJKmonofont{SimHei}
+}
+\usepackage{pgfplots}
+\usepgfplotslibrary{groupplots}
+\pgfplotsset{compat=1.18}
+\definecolor{cBlue}{HTML}{4477AA}
+\definecolor{cCyan}{HTML}{66CCEE}
+\definecolor{cGreen}{HTML}{228833}
+\definecolor{cOrange}{HTML}{CCBB44}
+\definecolor{cRed}{HTML}{EE6677}
+\definecolor{cPurple}{HTML}{AA3377}
+\definecolor{cGray}{HTML}{667085}
+\definecolor{cGrid}{HTML}{E0E0E0}
+\pgfplotsset{
+  nature axis/.style={
+    axis x line*=bottom,
+    axis y line*=left,
+    axis line style={black, line width=1.15pt},
+    tick align=outside,
+    tick style={black, line width=0.75pt},
+    major tick length=3pt,
+    minor tick length=2pt,
+    clip marker paths=true,
+    axis on top=false,
+    ymajorgrids=true,
+    xmajorgrids=false,
+    grid style={draw=cGrid, dashed, line width=0.45pt},
+    title style={font=\sffamily\fontsize{12}{14}\selectfont\bfseries},
+    label style={font=\sffamily\fontsize{11}{13}\selectfont},
+    tick label style={font=\sffamily\fontsize{10}{12}\selectfont},
+    legend style={
+      font=\sffamily\fontsize{9}{11}\selectfont,
+      draw=none,
+      fill=none,
+      cells={anchor=west},
+      /tikz/every even column/.append style={column sep=0.35cm}
+    },
+  },
+  every axis/.append style={
+    nature axis
+  }
+}
+
+\begin{document}
+\begin{tikzpicture}
+\begin{axis}[
+  width=13.2cm,
+  height=6.0cm,
+  ybar,
+  bar width=6.0pt,
+  ymin=0.90,
+  ymax=1.43,
+  ylabel={加速比},
+  symbolic x coords={fixed5,rand8,rank10x8,rand10x8,rand1000},
+  xtick=data,
+  xticklabels={固定$5\times5$,随机$8\times8$,近秩亏$10\times8$,随机$10\times8$,随机$1000\times1000$},
+  x tick label style={rotate=35, anchor=east},
+  enlarge x limits=0.10,
+  legend style={at={(0.5,1.07)}, anchor=south, legend columns=3},
+]
+\addplot+[draw=black, line width=0.35pt, fill=cBlue!82] coordinates {(fixed5,0.9702) (rand8,1.0276) (rank10x8,1.0121) (rand10x8,0.9891) (rand1000,1.142)};
+\addplot+[draw=black, line width=0.35pt, fill=cRed!78] coordinates {(fixed5,1.0612) (rand8,1.0754) (rank10x8,1.0922) (rand10x8,1.1162) (rand1000,1.3764)};
+\addplot+[draw=black, line width=0.35pt, fill=cGreen!78] coordinates {(fixed5,0.9437) (rand8,1.026) (rank10x8,1.0311) (rand10x8,1.0378) (rand1000,1.2342)};
+\legend{\texttt{-O0}, \texttt{-O1}, \texttt{-O2}}
+\end{axis}
+\end{tikzpicture}
+\end{document}
