@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999997 (TeX Live 2025) (preloaded format=xelatex 2025.12.12)  16 MAY 2026 00:03
+This is XeTeX, Version 3.141592653-2.6-0.999997 (TeX Live 2025) (preloaded format=xelatex 2025.12.12)  16 MAY 2026 11:10
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1335,10 +1335,41 @@ cord \TU/SimSun(0)/m/n/10.53937 与 \TU/lmtt/m/n/10.53937 perf report --stdio \T
 [11]
 
 [12]
+Underfull \hbox (badness 10000) in paragraph at lines 580--580
+[]|\TU/lmr/m/n/9.03374 WaitForMultipleObjects
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 580--580
+\TU/lmr/m/n/9.03374 4.150s\TU/SimSun(0)/m/n/9.03374 ；| \TU/lmr/m/n/9.03374 pthr
+ead mutex
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 580--580
+[]|\TU/lmr/m/n/9.03374 WaitForMultipleObjects
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 580--580
+\TU/lmr/m/n/9.03374 3.697s\TU/SimSun(0)/m/n/9.03374 ；| \TU/lmr/m/n/9.03374 GOMP
+ barrier
+ []
+
+
 
 [13]
+Underfull \hbox (badness 10000) in paragraph at lines 587--588
+[]\TU/SimSun(0)/m/n/10.53937 第 三，| \TU/lmr/m/n/10.53937 OpenMP \TU/SimSun(0)/m/
+n/10.53937 版 本 中 \TU/lmr/m/n/10.53937 VTune \TU/SimSun(0)/m/n/10.53937 明 确 识 别 
+出 了 \TU/lmtt/m/n/10.53937 gomp_team_barrier_wait \TU/SimSun(0)/m/n/10.53937 和
+ []
 
-[14] 
+
+
+[14]
+
+[15] 
 enddocument/afterlastpage (AED): lastpage setting LastPage.
 (./main.aux)
  ***********
@@ -1346,15 +1377,15 @@ LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2022/08/05>
  ***********
 Package rerunfilecheck Info: File `main.out' has not changed.
-(rerunfilecheck)             Checksum: F2822DB5BA813C92B3BD8C39FFC94F7D;2393.
+(rerunfilecheck)             Checksum: 7FB51C5B23093FE74AF8803397C1251E;2569.
  ) 
 Here is how much of TeX's memory you used:
- 41319 strings out of 473832
- 1001368 string characters out of 5733157
- 1758156 words of memory out of 5000000
- 63701 multiletter control sequences out of 15000+600000
- 566787 words of font info for 104 fonts, out of 8000000 for 9000
+ 41406 strings out of 473832
+ 1003236 string characters out of 5733157
+ 1758159 words of memory out of 5000000
+ 63777 multiletter control sequences out of 15000+600000
+ 571748 words of font info for 124 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
  103i,12n,117p,1190b,2333s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on main.pdf (15 pages).
+Output written on main.pdf (16 pages).

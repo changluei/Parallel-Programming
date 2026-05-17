@@ -21,7 +21,8 @@
 \contentsline {section}{\numberline {8}Profiling 分析}{10}{section.8}%
 \contentsline {subsection}{\numberline {8.1}总体硬件事件统计}{10}{subsection.8.1}%
 \contentsline {subsection}{\numberline {8.2}热点函数对比}{11}{subsection.8.2}%
-\contentsline {subsection}{\numberline {8.3}Profiling 结论}{12}{subsection.8.3}%
-\contentsline {section}{\numberline {9}结论}{13}{section.9}%
-\contentsline {section}{\numberline {A}实验文件说明}{13}{appendix.A}%
-\contentsline {section}{\numberline {B}与大模型协作记录}{14}{appendix.B}%
+\contentsline {subsection}{\numberline {8.3}VTune Threading 补充分析}{13}{subsection.8.3}%
+\contentsline {subsection}{\numberline {8.4}Profiling 结论}{14}{subsection.8.4}%
+\contentsline {section}{\numberline {9}结论}{14}{section.9}%
+\contentsline {section}{\numberline {A}实验文件说明}{15}{appendix.A}%
+\contentsline {section}{\numberline {B}与大模型协作记录}{15}{appendix.B}%
